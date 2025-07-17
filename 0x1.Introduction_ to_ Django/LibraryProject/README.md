@@ -61,6 +61,7 @@ The `Book` model in `bookshelf/models.py` contains:
    ```
 
 4. **Access Django shell**:
+
    ```bash
    python manage.py shell
    ```
