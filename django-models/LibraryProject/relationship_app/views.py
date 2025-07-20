@@ -1,5 +1,4 @@
-from typing import Any
-from django.shortcuts import render,redirect
+from django.shortcuts import render, redirect
 from .models import Book, Library
 from django.views.generic.detail import DetailView
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -8,17 +7,17 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.contrib.auth.decorators import permission_required
 
-
-
 # Create your views here.
-#Function-based views
-def list_books(request):
-    books = Book.objects.all() #fetching all books from the database
-    context = {'books':books} #creates a context dictionary with list of books
-    return render(request, 'relationship_app/list_books.html', context)
 
-#class-based view for listing books in a library
+# Function-based view to list all books
+def list_books(request):
+    """Function-based view that lists all books stored in the database"""
+    books = Book.objects.all()
+    return render(request, 'relationship_app/list_books.html', {'books': books})
+
+# Class-based view for library details
 class LibraryDetailView(DetailView):
+    """Class-based view that displays details for a specific library"""
     model = Library
     template_name = 'relationship_app/library_detail.html'
     context_object_name = 'library'
