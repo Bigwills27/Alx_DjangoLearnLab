@@ -1,8 +1,4 @@
-#python command
+# Delete book
 from bookshelf.models import Book
-
-book = Book.objects.get(id=1);
-book.delete();
-
-#expected output
-the book record will be deleted
+book = Book.objects.get(title='Nineteen Eighty-Four')
+book.delete()
