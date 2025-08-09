@@ -26,8 +26,8 @@ urlpatterns = [
     path('books/list/', ListView.as_view(), name='book-list-readonly'),
     path('books/create/', CreateView.as_view(), name='book-create'),
     path('books/<int:pk>/', DetailView.as_view(), name='book-detail'),
-    path('books/<int:pk>/update/', UpdateView.as_view(), name='book-update'),
-    path('books/<int:pk>/delete/', DeleteView.as_view(), name='book-delete'),
+    path('books/update/<int:pk>/', UpdateView.as_view(), name='book-update'),
+    path('books/delete/<int:pk>/', DeleteView.as_view(), name='book-delete'),
 
     # Token authentication endpoint
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),

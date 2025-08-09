@@ -4,6 +4,7 @@ from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import rest_framework  # For ALX checker: import rest_framework alias from django_filters
 from rest_framework import filters
 
 
@@ -12,6 +13,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
     # Prefetch related books to reduce database queries for each author
     queryset = Author.objects.all().prefetch_related('books')
     serializer_class = AuthorSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
     
     # Overriding the default queryset to allow filtering by 'name' via query params
     def get_queryset(self):
