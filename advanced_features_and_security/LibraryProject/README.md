@@ -1,4 +1,3 @@
-
 # Advanced Django Features and Security
 
 This Django project demonstrates advanced features including custom user models, permissions management, and security best practices as specified in the ALX curriculum.
@@ -46,10 +45,10 @@ class CustomUser(AbstractUser):
     username = models.CharField(max_length=150, unique=True)
     date_of_birth = models.DateField(null=True, blank=True)
     profile_photo = models.CharField(max_length=255, null=True, blank=True)
-    
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
-    
+
     objects = CustomUserManager()
 ```
 
@@ -94,13 +93,13 @@ class Book(models.Model):
     title = models.CharField(max_length=200)
     isbn = models.CharField(max_length=13, unique=True, blank=True, null=True)
     author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
-    
+
     class Meta:
         permissions = [
-            ("can_view", "Can view book"),   
-            ("can_create", "Can create book"),   
-            ("can_edit", "Can edit book"),   
-            ("can_delete", "Can delete book"),   
+            ("can_view", "Can view book"),
+            ("can_create", "Can create book"),
+            ("can_edit", "Can edit book"),
+            ("can_delete", "Can delete book"),
         ]
 ```
 
@@ -153,7 +152,7 @@ DEBUG = False  # Always False in production
 
 # Browser Security Headers
 SECURE_BROWSER_XSS_FILTER = True
-X_FRAME_OPTIONS = 'DENY'  
+X_FRAME_OPTIONS = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Secure Cookies (HTTPS only)
@@ -167,8 +166,8 @@ All forms include CSRF tokens for protection against Cross-Site Request Forgery:
 
 ```html
 <form method="post">
-    {% csrf_token %}
-    <!-- Form fields -->
+  {% csrf_token %}
+  <!-- Form fields -->
 </form>
 ```
 
@@ -179,7 +178,7 @@ class ExampleForm(forms.ModelForm):
     class Meta:
         model = Book
         fields = ['title', 'isbn', 'author']
-        
+
     def clean_title(self):
         title = self.cleaned_data.get('title')
         if not title:
@@ -230,22 +229,26 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ## **Installation**
 
 1. **Navigate to Project Directory**:
+
    ```bash
    cd advanced_features_and_security/LibraryProject
    ```
 
 2. **Apply Migrations**:
+
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
 
 3. **Create Superuser**:
+
    ```bash
    python manage.py createsuperuser
    ```
 
 4. **Set Up Groups and Permissions**:
+
    ```bash
    python manage.py shell
    >>> exec(open('bookshelf/groupaction.py').read())
@@ -286,7 +289,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 This implementation satisfies all ALX requirements for advanced Django features and security practices.
 
----ermissions and Groups in Django**
+---ermissions and Groups in Django\*\*
 
 ## **Overview**
 
@@ -346,7 +349,7 @@ from bookshelf.models import Book, CustomUser, Library
 groups_permissions = {
     'Admins': ['can_view_book', 'can_create_book', 'can_edit_book', 'can_delete_book',
                'can_view_library', 'can_create_library', 'can_edit_library', 'can_delete_library'],
-    'Editors': ['can_view_book', 'can_create_book', 'can_edit_book', 
+    'Editors': ['can_view_book', 'can_create_book', 'can_edit_book',
                 'can_view_library', 'can_create_library', 'can_edit_library'],
     'Viewers': ['can_view_book', 'can_view_library']
 }
@@ -354,7 +357,7 @@ groups_permissions = {
 # Step 2: Create groups and assign permissions to them
 for group_name, permissions in groups_permissions.items():
     group, created = Group.objects.get_or_create(name=group_name)
-    
+
     for perm in permissions:
         model_name = perm.split('_')[2]  # Extract model name
         content_type = ContentType.objects.get(model=model_name)
@@ -465,21 +468,22 @@ urlpatterns = [
 To ensure that everything was working correctly, I performed a series of tests:
 
 1. **Run the `groupaction.py` script**:
+
    - This script sets up the groups and assigns the permissions. Running it ensures that the correct permissions are assigned to each group.
 
 2. **Register and Login Users**:
+
    - I created test users and assigned them to different groups (`Admins`, `Editors`, `Viewers`) using the Django Admin panel.
 
 3. **Check Access Control**:
+
    - I logged in as different users and verified their access to various views (`book_list`, `add_book`, `edit_book`, `delete_book`).
 
 4. **View in Browser**:
    - I checked the HTML pages to ensure that the correct buttons/links appeared based on the user’s permissions.
-
 
 ## **7. Conclusion**
 
 By implementing RBAC in my Django application, I was able to control access to different parts of the application based on user roles. The `groupaction.py` script plays a crucial role in managing these permissions, while the custom permissions defined in `models.py` ensure that access is tightly controlled. Testing these permissions in the Django shell confirmed that the setup works as intended, ensuring a secure and functional application.
 
 ---
-
