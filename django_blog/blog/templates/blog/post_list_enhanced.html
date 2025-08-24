@@ -1,0 +1,179 @@
+{% extends 'blog/base.html' %}
+{% load static %}
+{% block title %}Enhanced Blog Posts{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>Latest Blog Posts</h1>
+
+            <!-- Featured Post -->
+            {% if posts %}
+            <div class="featured-post mb-4">
+                {% with posts.0 as featured_post %}
+                <div class="card">
+                    <div class="card-body">
+                        <span class="badge badge-primary mb-2">Featured</span>
+                        <h2 class="card-title">
+                            <a href="{% url 'post-detail' featured_post.pk %}">{{ featured_post.title }}</a>
+                        </h2>
+                        <p class="card-text">{{ featured_post.content|truncatewords:30 }}</p>
+                        <div class="post-meta">
+                            <small class="text-muted">
+                                By {{ featured_post.author }} • {{ featured_post.published_date|date:"M d, Y" }}
+                                • <span class="comment-count">{{ featured_post.comments.count }} comments</span>
+                            </small>
+                        </div>
+                        <div class="tags mt-2">
+                            {% for tag in featured_post.tags.all %}
+                            <span class="badge badge-secondary">{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endwith %}
+            </div>
+            {% endif %}
+
+            <!-- Post List -->
+            <div class="posts-grid">
+                {% for post in posts|slice:"1:" %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'post-detail' post.pk %}">{{ post.title }}</a>
+                        </h5>
+                        <p class="card-text">{{ post.content|truncatewords:20 }}</p>
+                        <div class="post-meta">
+                            <small class="text-muted">
+                                By {{ post.author }} • {{ post.published_date|date:"M d, Y" }}
+                                • {{ post.comments.count }} comments
+                            </small>
+                        </div>
+                        <div class="tags mt-2">
+                            {% for tag in post.tags.all %}
+                            <a href="{% url 'posts-by-tag' tag.slug %}" class="badge badge-outline">{{ tag.name }}</a>
+                            {% endfor %}
+                        </div>
+                        <div class="actions mt-2">
+                            <a href="{% url 'post-detail' post.pk %}" class="btn btn-sm btn-primary">Read More</a>
+                            {% if user == post.author %}
+                            <a href="{% url 'post-update' post.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-info">
+                    <h4>No posts yet!</h4>
+                    <p>Be the first to share your thoughts.</p>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'post-create' %}" class="btn btn-primary">Create First Post</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Blog pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo; Previous</a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next &raquo;</a>
+                        </li>
+                        {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="sidebar">
+                <!-- Search Widget -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Search Posts</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" action="{% url 'post-search' %}">
+                            <div class="input-group">
+                                <input type="text" name="q" class="form-control" placeholder="Search posts...">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">Go</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Popular Tags -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Popular Tags</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="tag-cloud">
+                            {% for tag in popular_tags %}
+                            <a href="{% url 'posts-by-tag' tag.slug %}" class="badge badge-secondary mr-1 mb-1"
+                                style="font-size: 1em;">
+                                {{ tag.name }} ({{ tag.post_count }})
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Comments -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Recent Comments</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for comment in recent_comments %}
+                        <div class="recent-comment mb-2">
+                            <small class="text-muted">{{ comment.author }} on</small>
+                            <a href="{% url 'post-detail' comment.post.pk %}">{{ comment.post.title|truncatechars:30
+                                }}</a>
+                            <small class="d-block text-muted">{{ comment.created_at|timesince }} ago</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                {% if user.is_authenticated %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Quick Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <a href="{% url 'post-create' %}" class="btn btn-primary btn-block mb-2">New Post</a>
+                        <a href="{% url 'profile' %}" class="btn btn-outline-secondary btn-block">My Profile</a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

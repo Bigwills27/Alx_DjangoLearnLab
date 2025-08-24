@@ -11,8 +11,10 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from .forms import CustomUserCreationForm, UserUpdateForm, CommentForm, PostForm
 from django.urls import reverse, reverse_lazy
-from .models import Comment, Post
+from .models import Comment, Post, Like, PostView, Category
 from django.db.models import Q
+from django.http import JsonResponse
+from django.contrib import messages
 
 
 # User-related views
@@ -46,6 +48,16 @@ class PostListView(DjangoListView):
     template_name = "blog/post_list.html"  # Specify the template to use
     context_object_name = "posts"
     ordering = ["-published_date"]  # Order posts by the published date (newest first)
+    paginate_by = 5  # Show 5 posts per page
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Add popular tags to context
+        from django.db.models import Count
+        context['popular_tags'] = Post.tags.most_common()[:10]
+        # Add recent comments
+        context['recent_comments'] = Comment.objects.select_related('post', 'author').order_by('-created_at')[:5]
+        return context
 
 
 class PostDetailView(DjangoDetailView):
@@ -58,7 +70,47 @@ class PostDetailView(DjangoDetailView):
             "-created_at"
         )
         context["comment_form"] = CommentForm()
+        
+        # Add like status and count
+        if self.request.user.is_authenticated:
+            context["user_has_liked"] = Like.objects.filter(
+                user=self.request.user, post=self.object
+            ).exists()
+        context["like_count"] = self.object.likes.count()
+        
         return context
+
+    def get(self, request, *args, **kwargs):
+        # Track post views
+        response = super().get(request, *args, **kwargs)
+        post = self.get_object()
+        
+        # Get client IP
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        
+        # Create or get view record
+        if request.user.is_authenticated:
+            PostView.objects.get_or_create(
+                user=request.user,
+                post=post,
+                ip_address=ip
+            )
+        else:
+            PostView.objects.get_or_create(
+                post=post,
+                ip_address=ip,
+                defaults={'user': None}
+            )
+        
+        # Update post view count
+        post.view_count = post.post_views.count()
+        post.save(update_fields=['view_count'])
+        
+        return response
 
     @method_decorator(login_required)
     def post(self, request, *args, **kwargs):
@@ -69,6 +121,7 @@ class PostDetailView(DjangoDetailView):
             comment.post = post
             comment.author = request.user
             comment.save()
+            messages.success(request, 'Your comment has been added!')
             return redirect("post-detail", pk=post.pk)
         return self.get(request, *args, **kwargs)
 
@@ -189,3 +242,47 @@ class PostByTagListView(DjangoListView):
     def get_queryset(self):
         slug = self.kwargs.get("tag_slug")
         return Post.objects.filter(tags__slug=slug)
+
+
+# Like/Unlike functionality
+@login_required
+def like_post(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    like, created = Like.objects.get_or_create(user=request.user, post=post)
+    
+    if not created:
+        # If like already exists, remove it (unlike)
+        like.delete()
+        liked = False
+        messages.info(request, 'You unliked this post.')
+    else:
+        liked = True
+        messages.success(request, 'You liked this post!')
+    
+    # Return JSON response for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'liked': liked,
+            'like_count': post.likes.count()
+        })
+    
+    return redirect('post-detail', pk=pk)
+
+
+# Category views
+class PostByCategoryListView(DjangoListView):
+    model = Post
+    template_name = "blog/post_list.html"
+    context_object_name = "posts"
+    paginate_by = 5
+
+    def get_queryset(self):
+        slug = self.kwargs.get("slug")
+        category = get_object_or_404(Category, slug=slug)
+        return Post.objects.filter(category=category)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        slug = self.kwargs.get("slug")
+        context['category'] = get_object_or_404(Category, slug=slug)
+        return context

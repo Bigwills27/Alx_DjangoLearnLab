@@ -1,47 +1,180 @@
 {% extends 'blog/base.html' %}
 {% load static %}
-{% block title %}Post Detail{% endblock %}
+{% block title %}{{ post.title }}{% endblock %}
 
-{% block content %} 
-    <h2>{{ post.title }}</h2>
-    <p>{{ post.content }}</p>
-    <p>Written by: {{ post.author }}</p>
-    <p>Published on: {{ post.published_date }}</p>
-    
-    {% if user == post.author %}
-        <a href="{% url 'post-update' post.id %}">Edit</a>
-        <a href="{% url 'post-delete' post.id %}">Delete</a>
-    {% endif %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <article class="post-detail">
+                <header class="post-header mb-4">
+                    <h1 class="post-title">{{ post.title }}</h1>
+                    <div class="post-meta">
+                        <small class="text-muted">
+                            By <strong>{{ post.author }}</strong> • 
+                            {{ post.published_date|date:"F d, Y" }} • 
+                            {{ post.view_count }} views
+                            {% if post.category %}
+                                • in <a href="{% url 'posts-by-category' post.category.slug %}">{{ post.category.name }}</a>
+                            {% endif %}
+                        </small>
+                    </div>
+                </header>
 
-    <h3>Comments</h3>
-    <ul>
-        {% for comment in comments %}
-            <li>
-                <strong>{{ comment.author }}:</strong> {{ comment.content }}<br>
-                <small>{{ comment.created_at }}</small>
-                {% if user == comment.author %}
-                    <a href="{% url 'comment-update' comment.id %}">Edit</a>
-                    <a href="{% url 'comment-delete' comment.id %}">Delete</a>
+                <div class="post-content mb-4">
+                    {{ post.content|linebreaks }}
+                </div>
+
+                <div class="post-actions mb-4">
+                    <!-- Like Button -->
+                    {% if user.is_authenticated %}
+                    <form method="POST" action="{% url 'like-post' post.pk %}" class="d-inline-block" id="like-form">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" id="like-btn">
+                            {% if user_has_liked %}
+                                <i class="fas fa-heart"></i> Unlike
+                            {% else %}
+                                <i class="far fa-heart"></i> Like
+                            {% endif %}
+                        </button>
+                        <span id="like-count">{{ like_count }}</span> likes
+                    </form>
+                    {% else %}
+                    <span class="text-muted">
+                        <i class="far fa-heart"></i> {{ like_count }} likes
+                    </span>
+                    {% endif %}
+
+                    <!-- Author Actions -->
+                    {% if user == post.author %}
+                    <div class="author-actions float-right">
+                        <a href="{% url 'post-update' post.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'post-delete' post.id %}" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Tags -->
+                <div class="post-tags mb-4">
+                    <strong>Tags:</strong>
+                    {% for tag in post.tags.all %}
+                    <a href="{% url 'posts-by-tag' tag.slug %}" class="badge badge-secondary mr-1">{{ tag.name }}</a>
+                    {% empty %}
+                    <span class="text-muted">No tags.</span>
+                    {% endfor %}
+                </div>
+            </article>
+
+            <!-- Comments Section -->
+            <section class="comments-section">
+                <h3>Comments ({{ comments.count }})</h3>
+                
+                {% if user.is_authenticated %}
+                <div class="comment-form mb-4">
+                    <h4>Leave a Comment</h4>
+                    <form method="POST">
+                        {% csrf_token %}
+                        {{ comment_form.as_p }}
+                        <button type="submit" class="btn btn-primary">Post Comment</button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <a href="{% url 'login' %}">Login</a> to leave a comment.
+                </div>
                 {% endif %}
-            </li>
-        {% empty %}
-            <li>No comments yet.</li>
-        {% endfor %}
-    </ul>
-    
-    <h3>Leave a Comment</h3>
-    <form method="POST">
-        {% csrf_token %}
-        {{ comment_form.as_p }}
-        <button type="submit">Post Comment</button>
-    </form>   
 
-    <p><strong>Tags:</strong>
-        {% for tag in post.tags.all %}
-            <a href="{% url 'posts-by-tag' tag.slug %}">{{ tag.name }}</a>
-        {% empty %}
-            No tags.
-        {% endfor %}
-    </p>
+                <div class="comments-list">
+                    {% for comment in comments %}
+                    <div class="comment mb-3 p-3 border rounded">
+                        <div class="comment-header d-flex justify-content-between">
+                            <strong>{{ comment.author }}</strong>
+                            <small class="text-muted">{{ comment.created_at|date:"M d, Y H:i" }}</small>
+                        </div>
+                        <div class="comment-content mt-2">
+                            {{ comment.content|linebreaks }}
+                        </div>
+                        {% if user == comment.author %}
+                        <div class="comment-actions mt-2">
+                            <a href="{% url 'comment-update' comment.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            <a href="{% url 'comment-delete' comment.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-light">
+                        <p class="mb-0">No comments yet. Be the first to comment!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="sidebar">
+                <!-- Author Info -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>About the Author</h5>
+                    </div>
+                    <div class="card-body">
+                        <strong>{{ post.author.get_full_name|default:post.author.username }}</strong>
+                        <p class="text-muted">{{ post.author.posts.count }} posts</p>
+                    </div>
+                </div>
+
+                <!-- Related Posts -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Related Posts</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- This would need to be added to the view context -->
+                        <p class="text-muted">Coming soon...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// AJAX for like button
+document.getElementById('like-form').addEventListener('submit', function(e) {
+    e.preventDefault();
     
+    fetch(this.action, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        const likeBtn = document.getElementById('like-btn');
+        const likeCount = document.getElementById('like-count');
+        
+        if (data.liked) {
+            likeBtn.innerHTML = '<i class="fas fa-heart"></i> Unlike';
+            likeBtn.classList.remove('btn-outline-danger');
+            likeBtn.classList.add('btn-danger');
+        } else {
+            likeBtn.innerHTML = '<i class="far fa-heart"></i> Like';
+            likeBtn.classList.remove('btn-danger');
+            likeBtn.classList.add('btn-outline-danger');
+        }
+        
+        likeCount.textContent = data.like_count;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+});
+</script>
 {% endblock %}

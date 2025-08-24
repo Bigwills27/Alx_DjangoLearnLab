@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from taggit.forms import TagWidget  # Import TagWidget from taggit
-from .models import Comment, Post
+from .models import Comment, Post, Category
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -44,7 +44,25 @@ class CommentForm(forms.ModelForm):
 class PostForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ["title", "content", "tags"]  # Include tags in the form
+        fields = ["title", "content", "category", "tags"]  # Include category and tags in the form
         widgets = {
             "tags": TagWidget(),  # Use TagWidget for tag input
+            "content": forms.Textarea(attrs={"rows": 8, "class": "form-control"}),
+            "title": forms.TextInput(attrs={"class": "form-control"}),
+            "category": forms.Select(attrs={"class": "form-control"}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = Category.objects.all()
+        self.fields['category'].empty_label = "Select a category (optional)"
+
+
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ["name", "description"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "description": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         }

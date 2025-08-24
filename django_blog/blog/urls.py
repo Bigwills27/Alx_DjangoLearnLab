@@ -9,7 +9,7 @@ from .views import (
     PostDeleteView,
 )
 from .views import CommentCreateView, CommentUpdateView, CommentDeleteView
-from .views import PostSearchView, PostByTagListView
+from .views import PostSearchView, PostByTagListView, PostByCategoryListView, like_post
 
 urlpatterns = [
     path("", PostListView.as_view(), name="post-list"),
@@ -17,6 +17,7 @@ urlpatterns = [
     path("post/new/", PostCreateView.as_view(), name="post-create"),
     path("post/<int:pk>/update/", PostUpdateView.as_view(), name="post-update"),
     path("post/<int:pk>/delete/", PostDeleteView.as_view(), name="post-delete"),
+    path("post/<int:pk>/like/", like_post, name="like-post"),
     path("register/", register, name="register"),
     path(
         "login/",
@@ -46,4 +47,5 @@ urlpatterns = [
     ),
     path("search/", PostSearchView.as_view(), name="post-search"),
     path("tags/<slug:tag_slug>/", PostByTagListView.as_view(), name="posts-by-tag"),
+    path("category/<slug:slug>/", PostByCategoryListView.as_view(), name="posts-by-category"),
 ]
