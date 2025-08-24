@@ -122,28 +122,55 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Configure static files for production using collectstatic
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+# Static files storage configuration
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files
+# Static files finders
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
+# Media files configuration for file uploads
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# AWS S3 Configuration for file hosting (optional)
+# AWS S3 Configuration for file hosting (production storage solution)
 USE_S3 = os.environ.get('USE_S3', 'False').lower() in ['true', '1', 'yes']
+
 if USE_S3:
+    # AWS S3 settings
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'us-east-1')
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_DEFAULT_ACL = None
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+    
+    # S3 static settings
+    STATIC_LOCATION = 'static'
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{STATIC_LOCATION}/'
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3StaticStorage'
+    
+    # S3 media settings
+    MEDIA_LOCATION = 'media'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{MEDIA_LOCATION}/'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+else:
+    # Local storage for development
+    STATIC_URL = '/static/'
+    MEDIA_URL = '/media/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -179,13 +206,26 @@ SECURE_SSL_REDIRECT = True
 # Database configuration for production (PostgreSQL)
 import os
 DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    import dj_database_url
+
+# Production PostgreSQL configuration with all required fields
+if DATABASE_URL or os.environ.get('USE_POSTGRES', 'False').lower() in ['true', '1', 'yes']:
     DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL)
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'social_media_db'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
     }
+    
+    # Override with DATABASE_URL if provided (for deployment platforms like Heroku)
+    if DATABASE_URL:
+        import dj_database_url
+        DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
 else:
-    # Keep SQLite for development
+    # Default to SQLite for development
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
